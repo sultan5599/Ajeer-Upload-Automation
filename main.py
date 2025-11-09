@@ -101,6 +101,36 @@ else:
 
 DEBUG_MODE = os.environ.get('AJEER_DEBUG', '').lower() == 'true'
 
+# Fix working directory for compiled executable (Issue: Nuitka onefile)
+# When compiled with Nuitka --onefile, the executable extracts to a temp directory
+# We need to change to the directory where the executable is located
+def fix_working_directory():
+    """Ensure working directory is where the executable/script is located"""
+    if getattr(sys, 'frozen', False):
+        # Running as compiled executable
+        if hasattr(sys, '_MEIPASS'):
+            # PyInstaller-style (not used here, but for compatibility)
+            exe_dir = os.path.dirname(sys.executable)
+        else:
+            # Nuitka or other
+            exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+
+        # Change to executable directory
+        if os.path.isdir(exe_dir):
+            os.chdir(exe_dir)
+            if DEBUG_MODE:
+                print(f"Working directory set to: {exe_dir}")
+    else:
+        # Running as Python script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        if os.path.isdir(script_dir):
+            os.chdir(script_dir)
+            if DEBUG_MODE:
+                print(f"Working directory set to: {script_dir}")
+
+# Call this before anything else
+fix_working_directory()
+
 def setup_playwright_browser_path():
     """Set browser path for both development and compiled executable"""
     if not os.environ.get('PLAYWRIGHT_BROWSERS_PATH'):
